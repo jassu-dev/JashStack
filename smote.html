@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>SMOTE Graph Visualization</title>
+  <style>
+    body {
+      font-family: Arial;
+      text-align: center;
+      background: #f4f6f9;
+    }
+    canvas {
+      background: #ffffff;
+      border: 1px solid #ccc;
+      margin-top: 20px;
+    }
+    button {
+      padding: 10px 15px;
+      margin: 10px;
+      border: none;
+      background: #007bff;
+      color: white;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+
+<body>
+
+<h2>SMOTE Visualization (Graph View)</h2>
+<p>X vs Y Feature Space with Proper Interpolation</p>
+
+<canvas id="canvas" width="600" height="500"></canvas><br>
+
+<button onclick="applySMOTE()">Apply SMOTE</button>
+<button onclick="reset()">Reset</button>
+
+<script>
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+let minority = [];
+let synthetic = [];
+
+const padding = 50;
+
+// Generate structured cluster
+function generateData(){
+  minority = [];
+  synthetic = [];
+
+  for(let i=0;i<10;i++){
+    let x = 3 + Math.random()*2;   // cluster
+    let y = 3 + Math.random()*2;
+    minority.push({x,y});
+  }
+
+  draw();
+}
+
+// Scale data to canvas
+function scaleX(x){
+  return padding + x * 80;
+}
+
+function scaleY(y){
+  return canvas.height - (padding + y * 80);
+}
+
+// Draw axes
+function drawAxes(){
+  ctx.strokeStyle = "#000";
+
+  // X axis
+  ctx.beginPath();
+  ctx.moveTo(padding, canvas.height - padding);
+  ctx.lineTo(canvas.width - padding, canvas.height - padding);
+  ctx.stroke();
+
+  // Y axis
+  ctx.beginPath();
+  ctx.moveTo(padding, padding);
+  ctx.lineTo(padding, canvas.height - padding);
+  ctx.stroke();
+
+  // Labels
+  ctx.fillText("X", canvas.width - padding + 10, canvas.height - padding);
+  ctx.fillText("Y", padding - 20, padding);
+}
+
+// Grid
+function drawGrid(){
+  ctx.strokeStyle = "#eee";
+
+  for(let i=1;i<=6;i++){
+    // vertical
+    ctx.beginPath();
+    ctx.moveTo(padding + i*80, padding);
+    ctx.lineTo(padding + i*80, canvas.height - padding);
+    ctx.stroke();
+
+    // horizontal
+    ctx.beginPath();
+    ctx.moveTo(padding, padding + i*80);
+    ctx.lineTo(canvas.width - padding, padding + i*80);
+    ctx.stroke();
+  }
+}
+
+// Distance
+function dist(a,b){
+  return Math.hypot(a.x-b.x, a.y-b.y);
+}
+
+// Nearest neighbor
+function nearest(p){
+  let best=null, min=Infinity;
+  for(let q of minority){
+    if(q===p) continue;
+    let d=dist(p,q);
+    if(d<min){min=d; best=q;}
+  }
+  return best;
+}
+
+// Draw point
+function drawPoint(p,color){
+  ctx.beginPath();
+  ctx.arc(scaleX(p.x), scaleY(p.y), 5, 0, 2*Math.PI);
+  ctx.fillStyle=color;
+  ctx.fill();
+}
+
+// Draw line
+function drawLine(a,b){
+  ctx.beginPath();
+  ctx.moveTo(scaleX(a.x), scaleY(a.y));
+  ctx.lineTo(scaleX(b.x), scaleY(b.y));
+  ctx.strokeStyle="#aaa";
+  ctx.stroke();
+}
+
+// Draw everything
+function draw(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  drawGrid();
+  drawAxes();
+
+  // lines
+  for(let p of minority){
+    let n = nearest(p);
+    drawLine(p,n);
+  }
+
+  // points
+  minority.forEach(p=>drawPoint(p,"red"));
+  synthetic.forEach(p=>drawPoint(p,"green"));
+}
+
+// SMOTE
+function applySMOTE(){
+  for(let i=0;i<20;i++){
+    let p = minority[Math.floor(Math.random()*minority.length)];
+    let n = nearest(p);
+
+    let lambda = Math.random();
+
+    let newP = {
+      x: p.x + lambda*(n.x - p.x),
+      y: p.y + lambda*(n.y - p.y)
+    };
+
+    synthetic.push(newP);
+  }
+
+  draw();
+}
+
+function reset(){
+  generateData();
+}
+
+generateData();
+</script>
+
+</body>
+</html>
